@@ -3,6 +3,10 @@ import express from "express";
 
 const app = express();
 app.use(express.json());
+app.use((req, _res, next) => {
+  console.log(`[Example-App-Server] ${req.method} ${req.url}`, req.body);
+  next();
+});
 
 const backendUrl = process.env.UA_BACKEND_URL || "http://localhost:3001";
 const backendId = process.env.UA_BACKEND_ID || "";
@@ -14,9 +18,28 @@ function sha256Hex(input: string): string {
 }
 
 app.post("/select-backend", (req, res) => {
-  const { projectId, canonicalRequest, backendIds } = req.body || {};
+  const { projectId, canonicalRequest } = req.body || {};
+  let { backendIds } = req.body || {};
+  if (typeof backendIds === "string") {
+    try {
+      backendIds = JSON.parse(backendIds);
+    } catch {
+      backendIds = backendIds
+        .replace(/^\[|\]$/g, "")
+        .split(",")
+        .map((s: string) => s.trim())
+        .filter(Boolean);
+    }
+  }
   if (!projectId || !canonicalRequest || !Array.isArray(backendIds)) {
-    res.status(400).json({ error: "Invalid request" });
+    res.status(400).json({
+      error: "Invalid request",
+      missing: {
+        projectId: !projectId,
+        canonicalRequest: !canonicalRequest,
+        backendIds: !Array.isArray(backendIds)
+      }
+    });
     return;
   }
   let selected = backendIds.find((id: string) => id === backendId && !blacklist.has(id));
@@ -33,7 +56,14 @@ app.post("/select-backend", (req, res) => {
 app.post("/verify", async (req, res) => {
   const { projectId, canonicalRequest, token } = req.body || {};
   if (!projectId || !canonicalRequest || !token) {
-    res.status(400).json({ error: "Invalid request" });
+    res.status(400).json({
+      error: "Invalid request",
+      missing: {
+        projectId: !projectId,
+        canonicalRequest: !canonicalRequest,
+        token: !token
+      }
+    });
     return;
   }
   if (!apiSecret) {
@@ -55,6 +85,7 @@ app.post("/verify", async (req, res) => {
     return;
   }
   const payload = JSON.parse(raw);
+  console.log(payload);
   const verdict = payload.verdict?.isTrusted ? "trusted" : "rejected";
   res.json({ verdict, reasonCodes: payload.verdict?.reasonCodes || [] });
 });
