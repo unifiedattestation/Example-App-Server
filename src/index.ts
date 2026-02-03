@@ -86,8 +86,8 @@ app.post("/verify", async (req, res) => {
   }
   const payload = JSON.parse(raw);
   console.log(payload);
-  const verdict = payload.verdict?.isTrusted ? "trusted" : "rejected";
-  res.json({ verdict, reasonCodes: payload.verdict?.reasonCodes || [] });
+  const verdict = payload.verdict || { isTrusted: false, reasonCodes: ["UNKNOWN"] };
+  res.json({ verdict });
 });
 
 app.listen(4000, () => {
