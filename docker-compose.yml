@@ -1,0 +1,12 @@
+version: "3.9"
+services:
+  example-app-server:
+    image: ghcr.io/unifiedattestation/example-app-server:latest
+    environment:
+      PORT: 4000
+      UA_BACKEND_URL: http://host.docker.internal:3001
+      UA_BACKEND_ID: ""
+      UA_API_SECRET: ""
+      UA_BACKEND_BLACKLIST: ""
+    ports:
+      - "4000:4000"
